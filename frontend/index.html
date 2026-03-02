@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="api-base-url" content="">
+    <meta name="api-base-url" content="https://hydroponic-pso.onrender.com">
     <title>Hydroponic Agriculture - CNN-PSO Optimization</title>
     <style>
         * {
@@ -24,7 +25,7 @@
             color: white;
             padding: 20px 0;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
         header h1 {
@@ -59,12 +60,12 @@
             font-size: 1em;
             font-weight: 500;
             transition: all 0.3s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         .nav-tabs button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
         .nav-tabs button.active {
@@ -77,7 +78,7 @@
             background: white;
             border-radius: 10px;
             padding: 40px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
         }
 
         .content-section.active {
@@ -149,7 +150,7 @@
             padding: 25px;
             border-radius: 10px;
             text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
         .metric-box h4 {
@@ -171,9 +172,17 @@
             margin-right: 8px;
         }
 
-        .status-healthy { background: #28a745; }
-        .status-unhealthy { background: #dc3545; }
-        .status-warning { background: #ffc107; }
+        .status-healthy {
+            background: #28a745;
+        }
+
+        .status-unhealthy {
+            background: #dc3545;
+        }
+
+        .status-warning {
+            background: #ffc107;
+        }
 
         .result-section {
             background: #f8f9fa;
@@ -220,8 +229,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .alert {
@@ -272,6 +286,7 @@
         }
     </style>
 </head>
+
 <body>
     <header>
         <h1>🌱 Hydroponic Agriculture ML System</h1>
@@ -294,9 +309,11 @@
 
             <div class="card">
                 <h3>📊 Project Details</h3>
-                <p><strong>Title:</strong> Hybrid Metaheuristic Optimization of Deep Learning Models for Hydroponic Agriculture</p>
+                <p><strong>Title:</strong> Hybrid Metaheuristic Optimization of Deep Learning Models for Hydroponic
+                    Agriculture</p>
                 <p><strong>Technology Stack:</strong> TensorFlow, Keras, PySwarms, Flask</p>
-                <p><strong>Optimization Method:</strong> Particle Swarm Optimization (PSO) for CNN Hyperparameter Tuning</p>
+                <p><strong>Optimization Method:</strong> Particle Swarm Optimization (PSO) for CNN Hyperparameter Tuning
+                </p>
             </div>
 
             <div class="card">
@@ -305,7 +322,8 @@
                     <li><strong>Data Source:</strong> IoT Sensor Network from Hydroponic System</li>
                     <li><strong>Total Samples:</strong> 50,570 records</li>
                     <li><strong>Sensors:</strong> pH, TDS, Water Level, Temperature, Humidity, Water Temperature</li>
-                    <li><strong>Control Variables:</strong> pH Reducer, Water Pump, Nutrients Adder, Humidifier, Exhaust Fan</li>
+                    <li><strong>Control Variables:</strong> pH Reducer, Water Pump, Nutrients Adder, Humidifier, Exhaust
+                        Fan</li>
                     <li><strong>Target:</strong> System Health Status (Binary Classification)</li>
                 </ul>
             </div>
@@ -425,7 +443,8 @@
             <h2>Model Performance Metrics</h2>
 
             <div class="info-box">
-                <strong>📌 Note:</strong> Run the full training pipeline (main.py) to generate comprehensive metrics including accuracy, precision, recall, F1-score, and convergence plots.
+                <strong>📌 Note:</strong> Run the full training pipeline (main.py) to generate comprehensive metrics
+                including accuracy, precision, recall, F1-score, and convergence plots.
             </div>
 
             <div class="card">
@@ -569,20 +588,20 @@ Dense(1, activation=sigmoid) → Binary Output
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
-            .then(response => response.json())
-            .then(result => {
-                document.getElementById('loading').style.display = 'none';
+                .then(response => response.json())
+                .then(result => {
+                    document.getElementById('loading').style.display = 'none';
 
-                if (result.success) {
-                    displayPredictionResults(result.predictions);
-                } else {
-                    showAlert('Error: ' + result.error, 'error');
-                }
-            })
-            .catch(error => {
-                document.getElementById('loading').style.display = 'none';
-                showAlert('Error making prediction', 'error');
-            });
+                    if (result.success) {
+                        displayPredictionResults(result.predictions);
+                    } else {
+                        showAlert('Error: ' + result.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('loading').style.display = 'none';
+                    showAlert('Error making prediction', 'error');
+                });
         }
 
         function displayPredictionResults(predictions) {
@@ -634,32 +653,32 @@ Dense(1, activation=sigmoid) → Binary Output
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    let html = `<p>Processed ${result.num_samples} samples</p>`;
-                    document.getElementById('batch-content').innerHTML = html;
-                    document.getElementById('batch-results').style.display = 'block';
-                    showAlert('Batch processing completed!', 'success');
-                } else {
-                    showAlert('Error: ' + result.error, 'error');
-                }
-            })
-            .catch(error => showAlert('Error processing batch', 'error'));
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        let html = `<p>Processed ${result.num_samples} samples</p>`;
+                        document.getElementById('batch-content').innerHTML = html;
+                        document.getElementById('batch-results').style.display = 'block';
+                        showAlert('Batch processing completed!', 'success');
+                    } else {
+                        showAlert('Error: ' + result.error, 'error');
+                    }
+                })
+                .catch(error => showAlert('Error processing batch', 'error'));
         }
 
         function loadMetrics() {
             apiFetch('/api/metrics')
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    console.log('Metrics loaded:', result.metrics);
-                    showAlert('Metrics loaded successfully!', 'success');
-                } else {
-                    showAlert('No metrics available yet. Run training pipeline first.', 'error');
-                }
-            })
-            .catch(error => showAlert('Error loading metrics', 'error'));
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        console.log('Metrics loaded:', result.metrics);
+                        showAlert('Metrics loaded successfully!', 'success');
+                    } else {
+                        showAlert('No metrics available yet. Run training pipeline first.', 'error');
+                    }
+                })
+                .catch(error => showAlert('Error loading metrics', 'error'));
         }
 
         function showAlert(message, type) {
@@ -672,10 +691,11 @@ Dense(1, activation=sigmoid) → Binary Output
         // Check API health on load
         window.addEventListener('load', () => {
             apiFetch('/api/health')
-            .then(response => response.json())
-            .then(data => console.log('API Health:', data))
-            .catch(error => console.log('API connection error'));
+                .then(response => response.json())
+                .then(data => console.log('API Health:', data))
+                .catch(error => console.log('API connection error'));
         });
     </script>
 </body>
+
 </html>
