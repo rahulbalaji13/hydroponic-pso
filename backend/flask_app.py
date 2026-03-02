@@ -26,9 +26,9 @@ else:
     tf = None
 
 # Initialize Flask app
-# NOTE: this project keeps `index.html` at repo root (not in `templates/`).
-# Point Flask templates there so `/` works consistently in local runs and containers.
-app = Flask(__name__, template_folder='../frontend', static_folder='../frontend', static_url_path='')
+# Initialize Flask app
+# Since the frontend is deployed separately on Vercel, the backend acts as a standalone API.
+app = Flask(__name__)
 CORS(app)
 
 # Global variables for models
@@ -73,8 +73,17 @@ def preprocess_input(data_array):
 
 @app.route('/')
 def index():
-    """Home page"""
-    return render_template('index.html')
+    """API Root page"""
+    return jsonify({
+        "status": "online",
+        "message": "Hydroponic ML API is running. Please use your Vercel frontend URL to access the user interface.",
+        "endpoints": {
+            "health": "/api/health",
+            "predict": "/api/predict",
+            "batch_predict": "/api/batch-predict",
+            "metrics": "/api/metrics"
+        }
+    })
 
 
 @app.route('/dashboard')
