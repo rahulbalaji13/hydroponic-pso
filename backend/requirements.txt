@@ -1,7 +1,7 @@
 # Requirements File for Hydroponic Agriculture ML Project
 
 # Core Dependencies
-tensorflow>=2.13.0
+tensorflow-cpu>=2.13.0
 keras>=2.13.0
 numpy>=1.24.0
 pandas>=2.0.0
