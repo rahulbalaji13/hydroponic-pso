@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="api-base-url" content="https://hydroponic-pso.onrender.com">
+    <meta name="api-base-url" content="https://cross-team-knowledge-relay.onrender.com">
     <title>Hydroponic Agriculture - CNN-PSO Optimization</title>
     <style>
         * {
@@ -470,6 +470,7 @@
             </div>
 
             <button class="btn" onclick="loadMetrics()">📊 Load Saved Metrics</button>
+            <div id="metrics-loaded"></div>
         </div>
 
         <!-- ARCHITECTURE SECTION -->
@@ -542,31 +543,117 @@ Dense(1, activation=sigmoid) → Binary Output
     </div>
 
     <script>
-        const API_BASE_URL = (
-            window.API_BASE_URL ||
-            document.querySelector('meta[name="api-base-url"]')?.content ||
-            ''
-        ).replace(/\/$/, '');
+        const configuredBase = (window.API_BASE_URL || document.querySelector('meta[name="api-base-url"]')?.content || '').replace(/\/$/, '');
+        const fallbackBases = [
+            'https://hydroponic-pso.onrender.com',
+            'https://cross-team-knowledge-relay.onrender.com'
+        ];
 
-        function apiFetch(path, options = {}) {
-            return fetch(`${API_BASE_URL}${path}`, options);
+        const API_CANDIDATES = [configuredBase, ...fallbackBases]
+            .filter(Boolean)
+            .filter((value, index, arr) => arr.indexOf(value) === index)
+            .map(base => base.replace(/\/$/, ''));
+
+        let ACTIVE_API_BASE = API_CANDIDATES[0] || '';
+
+        function parseJsonSafe(text) {
+            try {
+                return text ? JSON.parse(text) : {};
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function isCompatibleHealthPayload(data) {
+            return Boolean(
+                data && typeof data === 'object' && (
+                    Object.prototype.hasOwnProperty.call(data, 'baseline_model_loaded') ||
+                    Object.prototype.hasOwnProperty.call(data, 'tensorflow_available') ||
+                    Object.prototype.hasOwnProperty.call(data, 'endpoints')
+                )
+            );
+        }
+
+        function isExpectedPayload(path, data) {
+            if (!data || typeof data !== 'object') return false;
+
+            if (path === '/api/health') {
+                return isCompatibleHealthPayload(data);
+            }
+
+            if (path === '/api/predict') {
+                return Object.prototype.hasOwnProperty.call(data, 'success') &&
+                    (Object.prototype.hasOwnProperty.call(data, 'predictions') || Object.prototype.hasOwnProperty.call(data, 'error'));
+            }
+
+            if (path === '/api/batch-predict') {
+                return Object.prototype.hasOwnProperty.call(data, 'success') &&
+                    (Object.prototype.hasOwnProperty.call(data, 'results') || Object.prototype.hasOwnProperty.call(data, 'error'));
+            }
+
+            if (path === '/api/metrics') {
+                return Object.prototype.hasOwnProperty.call(data, 'success');
+            }
+
+            return true;
+        }
+
+        async function detectCompatibleApiBase() {
+            for (const base of API_CANDIDATES) {
+                try {
+                    const response = await fetch(`${base}/api/health`);
+                    const payload = parseJsonSafe(await response.text());
+
+                    if (response.ok && isCompatibleHealthPayload(payload)) {
+                        ACTIVE_API_BASE = base;
+                        return payload;
+                    }
+                } catch (error) {
+                    // try next candidate
+                }
+            }
+
+            throw new Error('No compatible backend detected.');
+        }
+
+        async function apiFetch(path, options = {}) {
+            const basesToTry = [ACTIVE_API_BASE, ...API_CANDIDATES].filter(Boolean)
+                .filter((value, index, arr) => arr.indexOf(value) === index);
+
+            let lastError = new Error('No API base URL configured.');
+
+            for (const base of basesToTry) {
+                try {
+                    const response = await fetch(`${base}${path}`, options);
+                    const text = await response.text();
+                    const data = parseJsonSafe(text);
+
+                    if (data === null) {
+                        throw new Error(`Invalid JSON response from ${base}${path}`);
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(data.error || `HTTP ${response.status}`);
+                    }
+
+                    if (!isExpectedPayload(path, data)) {
+                        throw new Error(`Incompatible API response from ${base}`);
+                    }
+
+                    ACTIVE_API_BASE = base;
+                    return data;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            throw lastError;
         }
 
         function showSection(sectionId) {
-            // Hide all sections
-            document.querySelectorAll('.content-section').forEach(section => {
-                section.classList.remove('active');
-            });
-
-            // Remove active class from buttons
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            // Show selected section
+            document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(sectionId).classList.add('active');
-
-            // Mark button as active
             event.target.classList.add('active');
         }
 
@@ -588,19 +675,18 @@ Dense(1, activation=sigmoid) → Binary Output
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
-                .then(response => response.json())
                 .then(result => {
                     document.getElementById('loading').style.display = 'none';
 
                     if (result.success) {
-                        displayPredictionResults(result.predictions);
+                        displayPredictionResults(result.predictions || {});
                     } else {
-                        showAlert('Error: ' + result.error, 'error');
+                        showAlert('Error: ' + (result.error || 'Prediction failed'), 'error');
                     }
                 })
                 .catch(error => {
                     document.getElementById('loading').style.display = 'none';
-                    showAlert('Error making prediction', 'error');
+                    showAlert('Error making prediction: ' + error.message, 'error');
                 });
         }
 
@@ -611,7 +697,7 @@ Dense(1, activation=sigmoid) → Binary Output
             if (predictions.baseline) {
                 const b = predictions.baseline;
                 baselineHtml = `
-                    <p><strong>Health Status:</strong> 
+                    <p><strong>Health Status:</strong>
                         <span class="status-indicator status-${b.health_status.toLowerCase()}"></span>
                         ${b.health_status}
                     </p>
@@ -623,7 +709,7 @@ Dense(1, activation=sigmoid) → Binary Output
             if (predictions.optimized) {
                 const o = predictions.optimized;
                 optimizedHtml = `
-                    <p><strong>Health Status:</strong> 
+                    <p><strong>Health Status:</strong>
                         <span class="status-indicator status-${o.health_status.toLowerCase()}"></span>
                         ${o.health_status}
                     </p>
@@ -653,49 +739,64 @@ Dense(1, activation=sigmoid) → Binary Output
                 method: 'POST',
                 body: formData
             })
-                .then(response => response.json())
                 .then(result => {
                     if (result.success) {
-                        let html = `<p>Processed ${result.num_samples} samples</p>`;
-                        document.getElementById('batch-content').innerHTML = html;
+                        document.getElementById('batch-content').innerHTML = `<p>Processed ${result.num_samples} samples</p>`;
                         document.getElementById('batch-results').style.display = 'block';
                         showAlert('Batch processing completed!', 'success');
                     } else {
-                        showAlert('Error: ' + result.error, 'error');
+                        showAlert('Error: ' + (result.error || 'Batch failed'), 'error');
                     }
                 })
-                .catch(error => showAlert('Error processing batch', 'error'));
+                .catch(error => showAlert('Error processing batch: ' + error.message, 'error'));
         }
 
         function loadMetrics() {
             apiFetch('/api/metrics')
-                .then(response => response.json())
                 .then(result => {
                     if (result.success) {
-                        console.log('Metrics loaded:', result.metrics);
+                        const baseline = result.metrics.baseline || {};
+                        const optimized = result.metrics.optimized || {};
+
+                        const html = `
+                            <div class="card">
+                                <h3>Loaded Metrics</h3>
+                                <div class="metrics-grid">
+                                    <div class="metric-box"><h4>Baseline Accuracy</h4><div class="value">${((baseline.accuracy || 0) * 100).toFixed(2)}%</div></div>
+                                    <div class="metric-box"><h4>Optimized Accuracy</h4><div class="value">${((optimized.accuracy || 0) * 100).toFixed(2)}%</div></div>
+                                    <div class="metric-box"><h4>Baseline F1</h4><div class="value">${((baseline.f1_score || 0) * 100).toFixed(2)}%</div></div>
+                                    <div class="metric-box"><h4>Optimized F1</h4><div class="value">${((optimized.f1_score || 0) * 100).toFixed(2)}%</div></div>
+                                </div>
+                            </div>
+                        `;
+
+                        document.getElementById('metrics-loaded').innerHTML = html;
                         showAlert('Metrics loaded successfully!', 'success');
                     } else {
                         showAlert('No metrics available yet. Run training pipeline first.', 'error');
                     }
                 })
-                .catch(error => showAlert('Error loading metrics', 'error'));
+                .catch(error => showAlert('Error loading metrics: ' + error.message, 'error'));
         }
 
         function showAlert(message, type) {
             const alertDiv = document.getElementById('alert');
+            alertDiv.style.display = 'block';
             alertDiv.textContent = message;
             alertDiv.className = 'alert ' + type;
             setTimeout(() => alertDiv.style.display = 'none', 5000);
         }
 
-        // Check API health on load
         window.addEventListener('load', () => {
-            apiFetch('/api/health')
-                .then(response => response.json())
-                .then(data => console.log('API Health:', data))
-                .catch(error => console.log('API connection error'));
+            detectCompatibleApiBase()
+                .then(data => console.log('API Health:', data, 'Using:', ACTIVE_API_BASE))
+                .catch(error => {
+                    console.log('API connection error:', error.message);
+                    showAlert('No compatible backend detected. Please verify backend deployment.', 'error');
+                });
         });
     </script>
+
 </body>
 
 </html>
