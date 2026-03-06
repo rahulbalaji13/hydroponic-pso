@@ -550,39 +550,13 @@ Dense(1, activation=sigmoid) → Binary Output
         ).replace(/\/$/, '');
 
         function apiFetch(path, options = {}) {
-            return fetch(`${API_BASE_URL}${path}`, options).then(async (response) => {
-                const text = await response.text();
-                let data = {};
-
-                try {
-                    data = text ? JSON.parse(text) : {};
-                } catch (error) {
-                    throw new Error(`Invalid JSON response from ${path}`);
-                }
-
-                if (!response.ok) {
-                    throw new Error(data.error || `HTTP ${response.status}`);
-                }
-
-                return data;
-            });
+            return fetch(`${API_BASE_URL}${path}`, options);
         }
 
         function showSection(sectionId) {
-            // Hide all sections
-            document.querySelectorAll('.content-section').forEach(section => {
-                section.classList.remove('active');
-            });
-
-            // Remove active class from buttons
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            // Show selected section
+            document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(sectionId).classList.add('active');
-
-            // Mark button as active
             event.target.classList.add('active');
         }
 
@@ -608,14 +582,14 @@ Dense(1, activation=sigmoid) → Binary Output
                     document.getElementById('loading').style.display = 'none';
 
                     if (result.success) {
-                        displayPredictionResults(result.predictions);
+                        displayPredictionResults(result.predictions || {});
                     } else {
-                        showAlert('Error: ' + result.error, 'error');
+                        showAlert('Error: ' + (result.error || 'Prediction failed'), 'error');
                     }
                 })
                 .catch(error => {
                     document.getElementById('loading').style.display = 'none';
-                    showAlert('Error making prediction', 'error');
+                    showAlert('Error making prediction: ' + error.message, 'error');
                 });
         }
 
@@ -626,7 +600,7 @@ Dense(1, activation=sigmoid) → Binary Output
             if (predictions.baseline) {
                 const b = predictions.baseline;
                 baselineHtml = `
-                    <p><strong>Health Status:</strong> 
+                    <p><strong>Health Status:</strong>
                         <span class="status-indicator status-${b.health_status.toLowerCase()}"></span>
                         ${b.health_status}
                     </p>
@@ -638,7 +612,7 @@ Dense(1, activation=sigmoid) → Binary Output
             if (predictions.optimized) {
                 const o = predictions.optimized;
                 optimizedHtml = `
-                    <p><strong>Health Status:</strong> 
+                    <p><strong>Health Status:</strong>
                         <span class="status-indicator status-${o.health_status.toLowerCase()}"></span>
                         ${o.health_status}
                     </p>
@@ -670,12 +644,11 @@ Dense(1, activation=sigmoid) → Binary Output
             })
                 .then(result => {
                     if (result.success) {
-                        let html = `<p>Processed ${result.num_samples} samples</p>`;
-                        document.getElementById('batch-content').innerHTML = html;
+                        document.getElementById('batch-content').innerHTML = `<p>Processed ${result.num_samples} samples</p>`;
                         document.getElementById('batch-results').style.display = 'block';
                         showAlert('Batch processing completed!', 'success');
                     } else {
-                        showAlert('Error: ' + result.error, 'error');
+                        showAlert('Error: ' + (result.error || 'Batch failed'), 'error');
                     }
                 })
                 .catch(error => showAlert('Error processing batch: ' + error.message, 'error'));
@@ -717,13 +690,14 @@ Dense(1, activation=sigmoid) → Binary Output
             setTimeout(() => alertDiv.style.display = 'none', 5000);
         }
 
-        // Check API health on load
         window.addEventListener('load', () => {
             apiFetch('/api/health')
+                .then(response => response.json())
                 .then(data => console.log('API Health:', data))
-                .catch(error => console.log('API connection error:', error.message));
+                .catch(error => console.log('API connection error'));
         });
     </script>
+
 </body>
 
 </html>
