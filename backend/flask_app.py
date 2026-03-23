@@ -33,8 +33,10 @@ CORS(app)
 
 # Global variables for models
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
 RESULTS_DIR = os.path.join(BASE_DIR, 'results')
+FRONTEND_INDEX = os.path.join(PROJECT_ROOT, 'frontend', 'index.html')
 
 baseline_model = None
 optimized_model = None
@@ -100,10 +102,28 @@ def preprocess_input(data_array):
 
 @app.route('/')
 def index():
-    """API Root page"""
+    """Serve the local frontend when available, otherwise return API information."""
+    if os.path.exists(FRONTEND_INDEX):
+        return send_file(FRONTEND_INDEX)
+
     return jsonify({
         "status": "online",
-        "message": "Hydroponic ML API is running. Please use your Vercel frontend URL to access the user interface.",
+        "message": "Hydroponic ML API is running.",
+        "endpoints": {
+            "health": "/api/health",
+            "predict": "/api/predict",
+            "batch_predict": "/api/batch-predict",
+            "metrics": "/api/metrics"
+        }
+    })
+
+
+@app.route('/api')
+def api_index():
+    """API index page."""
+    return jsonify({
+        "status": "online",
+        "message": "Hydroponic ML API is running.",
         "endpoints": {
             "health": "/api/health",
             "predict": "/api/predict",
@@ -226,15 +246,38 @@ def batch_predict():
 
         # Read CSV
         df = pd.read_csv(file)
+        df.columns = [str(col).strip() for col in df.columns]
 
-        # Expected columns
-        feature_cols = ['pH', 'TDS', 'water_level', 'DHT_temp', 'DHT_humidity', 'water_temp']
+        # Expected columns with case-insensitive aliases
+        canonical_feature_cols = ['pH', 'TDS', 'water_level', 'DHT_temp', 'DHT_humidity', 'water_temp']
+        normalized_mapping = {
+            'ph': 'pH',
+            'tds': 'TDS',
+            'water_level': 'water_level',
+            'dht_temp': 'DHT_temp',
+            'dht_humidity': 'DHT_humidity',
+            'water_temp': 'water_temp'
+        }
 
-        if not all(col in df.columns for col in feature_cols):
-            return jsonify({'error': 'Missing required columns'}), 400
+        rename_map = {}
+        for column in df.columns:
+            normalized = column.strip().lower()
+            if normalized in normalized_mapping:
+                rename_map[column] = normalized_mapping[normalized]
+
+        if rename_map:
+            df = df.rename(columns=rename_map)
+
+        missing_cols = [col for col in canonical_feature_cols if col not in df.columns]
+        if missing_cols:
+            return jsonify({
+                'error': 'Missing required columns',
+                'missing_columns': missing_cols,
+                'expected_columns': canonical_feature_cols
+            }), 400
 
         # Prepare features
-        features = df[feature_cols].values.astype(float)
+        features = df[canonical_feature_cols].values.astype(float)
         X = preprocess_input(features)
 
         results = []
